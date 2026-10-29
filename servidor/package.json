@@ -1,0 +1,21 @@
+{
+  "name": "medidor-conexion-servidor",
+  "version": "1.0.0",
+  "description": "API REST del TFI Comunicación de Datos: pruebas de red y almacenamiento de mediciones",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "setup-db": "node src/setup-db.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "pg": "^8.23.1"
+  }
+}
