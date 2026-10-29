@@ -163,7 +163,7 @@ suspend fun medirYEnviar(
         informar("Paso 3 de 4: midiendo la subida (unos 10 s)...")
         val subida = medirSubida()
         informar("Paso 4 de 4: enviando los resultados al servidor...")
-        enviarMedicion(red, contexto, ping, descarga, subida, distanciaM)
+        enviarMedicion(red, contexto, ping, descarga, subida, distanciaM, idDelDispositivo(context))
         ResultadoMedicion(
             mensaje = "Medición guardada en el servidor",
             datos = datos,

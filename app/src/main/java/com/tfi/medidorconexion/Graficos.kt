@@ -110,15 +110,26 @@ private fun GraficosDe(mediciones: List<MedicionEnvio>) {
         }
     }
 
-    // 1. Velocidad de descarga según el nivel de señal (solo Wi-Fi)
-    val puntos = wifi.mapNotNull { m -> m.rssiDbm?.let { it.toDouble() to m.descargaMbps } }
-    TarjetaGrafico("📈  Descarga según la señal (Wi-Fi)") {
-        if (puntos.isEmpty()) {
+    // 1. Velocidad de descarga y velocidad de enlace según el nivel de señal (solo Wi-Fi), como pide el informe
+    val puntosDescarga = wifi.mapNotNull { m -> m.rssiDbm?.let { it.toDouble() to m.descargaMbps } }
+    val puntosEnlace = wifi.mapNotNull { m ->
+        val senal = m.rssiDbm
+        val enlace = m.enlaceMbps
+        if (senal != null && enlace != null) senal.toDouble() to enlace.toDouble() else null
+    }
+    TarjetaGrafico("📈  Descarga y enlace según la señal (Wi-Fi)") {
+        if (puntosDescarga.isEmpty()) {
             Text("Todavía no hay mediciones Wi-Fi con señal.")
         } else {
-            GraficoDispersion(puntos)
+            GraficoDispersion(
+                listOfNotNull(
+                    SerieDispersion("Descarga medida", TurquesaMarca, puntosDescarga),
+                    if (puntosEnlace.isNotEmpty()) SerieDispersion("Velocidad de enlace", NaranjaMarca, puntosEnlace) else null
+                )
+            )
             Text(
-                "${puntos.size} mediciones. Cuanto más a la derecha, mejor señal.",
+                "${puntosDescarga.size} mediciones. Cuanto más a la derecha, mejor señal. " +
+                    "El enlace es la velocidad que negocia el celular con el router; la descarga es la real.",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -147,18 +158,22 @@ private fun TarjetaGrafico(titulo: String, contenido: @Composable () -> Unit) {
     }
 }
 
-// Puntos (señal en dBm, velocidad en Mbps): eje horizontal = señal, eje vertical = velocidad
+// Una serie de puntos (señal en dBm, velocidad en Mbps) con su nombre y su color
+private data class SerieDispersion(val nombre: String, val color: Color, val puntos: List<Pair<Double, Double>>)
+
+// Puntos de una o más series: eje horizontal = señal (dBm), eje vertical = velocidad (Mbps)
 @Composable
-private fun GraficoDispersion(puntos: List<Pair<Double, Double>>) {
-    val minX = puntos.minOf { it.first }
-    val maxX = puntos.maxOf { it.first }
+private fun GraficoDispersion(series: List<SerieDispersion>) {
+    val todos = series.flatMap { it.puntos }
+    val minX = todos.minOf { it.first }
+    val maxX = todos.maxOf { it.first }
     val (desde, hasta) = if (maxX - minX < 5) (minX - 5) to (maxX + 5) else minX to maxX
-    val maxY = max(10.0, ceil(puntos.maxOf { it.second } / 10) * 10)
+    val maxY = max(10.0, ceil(todos.maxOf { it.second } / 10) * 10)
     val rejilla = MaterialTheme.colorScheme.outlineVariant
 
-    Column {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text("Mbps (máx. ${"%.0f".format(maxY)})", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Canvas(modifier = Modifier.fillMaxWidth().height(190.dp)) {
+        Canvas(modifier = Modifier.fillMaxWidth().height(200.dp)) {
             val margen = 12.dp.toPx()
             val ancho = size.width - 2 * margen
             val alto = size.height - 2 * margen
@@ -166,19 +181,24 @@ private fun GraficoDispersion(puntos: List<Pair<Double, Double>>) {
                 val y = margen + alto * i / 4
                 drawLine(rejilla, Offset(margen, y), Offset(size.width - margen, y), strokeWidth = 1.dp.toPx())
             }
-            for ((x, y) in puntos) {
-                val centro = Offset(
-                    margen + ancho * ((x - desde) / (hasta - desde)).toFloat(),
-                    margen + alto * (1 - (y / maxY).toFloat())
-                )
-                // Un halo suave alrededor de cada punto
-                drawCircle(TurquesaMarca.copy(alpha = 0.25f), radius = 12.dp.toPx(), center = centro)
-                drawCircle(TurquesaMarca, radius = 6.dp.toPx(), center = centro)
+            for (serie in series) {
+                for ((x, y) in serie.puntos) {
+                    val centro = Offset(
+                        margen + ancho * ((x - desde) / (hasta - desde)).toFloat(),
+                        margen + alto * (1 - (y / maxY).toFloat())
+                    )
+                    // Un halo suave alrededor de cada punto
+                    drawCircle(serie.color.copy(alpha = 0.25f), radius = 12.dp.toPx(), center = centro)
+                    drawCircle(serie.color, radius = 6.dp.toPx(), center = centro)
+                }
             }
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("${"%.0f".format(desde)} dBm", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("${"%.0f".format(hasta)} dBm", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            for (serie in series) Leyenda(serie.nombre, serie.color)
         }
     }
 }

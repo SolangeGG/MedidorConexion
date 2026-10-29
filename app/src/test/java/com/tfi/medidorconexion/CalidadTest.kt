@@ -152,8 +152,56 @@ class CalidadTest {
     }
 
     @Test
+    fun filtros_porConexionBandaOperador() {
+        val wifi5 = medicion("WIFI", "5 GHz", 100.0)
+        val wifi24 = medicion("WIFI", "2,4 GHz", 40.0)
+        val movil = medicion("MOVIL", null, 20.0).copy(operador = "Personal")
+        val todas = listOf(wifi5, wifi24, movil)
+
+        assertEquals(todas, filtrarMediciones(todas, FiltroHistorial()))
+        assertEquals(listOf(wifi5, wifi24), filtrarMediciones(todas, FiltroHistorial(tipo = "WIFI")))
+        assertEquals(listOf(wifi5), filtrarMediciones(todas, FiltroHistorial(banda = "5 GHz")))
+        assertEquals(listOf(movil), filtrarMediciones(todas, FiltroHistorial(operador = "Personal")))
+        assertEquals(emptyList<MedicionEnvio>(), filtrarMediciones(todas, FiltroHistorial(tipo = "MOVIL", banda = "5 GHz")))
+    }
+
+    @Test
+    fun filtros_porFecha() {
+        val zona = java.time.ZoneId.of("America/Argentina/Tucuman")
+        val ahora = java.time.Instant.parse("2026-10-29T15:00:00Z")   // 12:00 del 29/10 en Tucumán
+        val deHoy = medicion("WIFI", "5 GHz", 10.0).copy(fechaHora = "2026-10-29T13:00:00Z")
+        val dePocosDias = medicion("WIFI", "5 GHz", 20.0).copy(fechaHora = "2026-10-25T13:00:00Z")
+        val deHaceUnMes = medicion("WIFI", "5 GHz", 30.0).copy(fechaHora = "2026-09-01T13:00:00Z")
+        val todas = listOf(deHoy, dePocosDias, deHaceUnMes)
+
+        fun con(rango: RangoFecha) = filtrarMediciones(todas, FiltroHistorial(fecha = rango), ahora, zona)
+        assertEquals(listOf(deHoy), con(RangoFecha.HOY))
+        assertEquals(listOf(deHoy, dePocosDias), con(RangoFecha.SIETE_DIAS))
+        assertEquals(listOf(deHoy, dePocosDias), con(RangoFecha.TREINTA_DIAS))
+        assertEquals(todas, con(RangoFecha.TODAS))
+    }
+
+    @Test
+    fun filtro_activo_soloSiHayAlgoElegido() {
+        assertEquals(false, FiltroHistorial().activo)
+        assertEquals(true, FiltroHistorial(tipo = "WIFI").activo)
+        assertEquals(true, FiltroHistorial(fecha = RangoFecha.HOY).activo)
+    }
+
+    @Test
     fun resumen_sinMediciones_esVacio() {
         assertEquals(emptyList<DatoVisual>(), resumenDeMediciones(emptyList()))
+    }
+
+    @Test
+    fun soloDeEsteDispositivo_conIdentificador_separaCelularesDelMismoModelo() {
+        val mio = medicion("WIFI", "5 GHz", 50.0).copy(marca = "motorola", modelo = "moto g32", dispositivoId = "MI-ID")
+        val gemelo = medicion("WIFI", "5 GHz", 90.0).copy(marca = "motorola", modelo = "moto g32", dispositivoId = "OTRO-ID")
+        val viejaMia = medicion("WIFI", "5 GHz", 20.0).copy(marca = "motorola", modelo = "moto g32")   // sin identificador
+        val viejaAjena = medicion("WIFI", "5 GHz", 30.0).copy(marca = "samsung", modelo = "A54")
+        val resultado = soloDeEsteDispositivo(listOf(mio, gemelo, viejaMia, viejaAjena), "motorola", "moto g32", "MI-ID")
+        // El gemelo (mismo modelo, otro identificador) no entra; la vieja sin identificador sí, por marca y modelo
+        assertEquals(listOf(mio, viejaMia), resultado)
     }
 
     @Test

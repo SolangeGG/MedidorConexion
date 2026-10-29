@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,6 +54,7 @@ sealed interface EstadoHistorial {
 // Lee el historial del servidor; devuelve el estado y una función para volver a cargarlo
 @Composable
 fun cargarHistorial(): Pair<EstadoHistorial, () -> Unit> {
+    val context = LocalContext.current
     var estado by remember { mutableStateOf<EstadoHistorial>(EstadoHistorial.Cargando) }
     var recargas by remember { mutableIntStateOf(0) }
 
@@ -60,7 +62,9 @@ fun cargarHistorial(): Pair<EstadoHistorial, () -> Unit> {
         estado = EstadoHistorial.Cargando
         estado = try {
             // Solo las mediciones de este celular, aunque el servidor guarde las de otros
-            EstadoHistorial.Listo(soloDeEsteDispositivo(obtenerHistorial(), Build.MANUFACTURER, Build.MODEL))
+            EstadoHistorial.Listo(
+                soloDeEsteDispositivo(obtenerHistorial(), Build.MANUFACTURER, Build.MODEL, idDelDispositivo(context))
+            )
         } catch (e: Exception) {
             EstadoHistorial.Error(e.message ?: "error desconocido")
         }
@@ -89,6 +93,8 @@ fun detalleConexion(m: MedicionEnvio): String =
 fun PantallaHistorial(modifier: Modifier = Modifier, calidad: Calidad? = null) {
     val (estado, recargar) = cargarHistorial()
     var seleccionada by remember { mutableStateOf<MedicionEnvio?>(null) }
+    var filtro by remember { mutableStateOf(FiltroHistorial()) }
+    var mostrarFiltros by remember { mutableStateOf(false) }
 
     // Al tocar una medición se abre su detalle en lugar de la lista
     val abierta = seleccionada
@@ -101,11 +107,18 @@ fun PantallaHistorial(modifier: Modifier = Modifier, calidad: Calidad? = null) {
         EncabezadoApp("Historial", "Las mediciones de tu dispositivo", calidad = calidad)
 
         Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-            FilledTonalButton(
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-                shape = RoundedCornerShape(14.dp),
-                onClick = recargar
-            ) { Text("🔄  Actualizar", fontWeight = FontWeight.SemiBold) }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                FilledTonalButton(
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    onClick = recargar
+                ) { Text("🔄  Actualizar", fontWeight = FontWeight.SemiBold) }
+                OutlinedButton(
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    onClick = { mostrarFiltros = !mostrarFiltros }
+                ) { Text(if (filtro.activo) "🔎  Filtros •" else "🔎  Filtros", fontWeight = FontWeight.SemiBold) }
+            }
             Text(
                 text = "Tocá una medición para ver su detalle.",
                 fontSize = 13.sp,
@@ -121,8 +134,20 @@ fun PantallaHistorial(modifier: Modifier = Modifier, calidad: Calidad? = null) {
                     if (e.mediciones.isEmpty()) {
                         Text("Todavía no hay mediciones de este dispositivo.")
                     } else {
+                        val visibles = filtrarMediciones(e.mediciones, filtro)
                         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            items(e.mediciones) { m -> TarjetaMedicion(m) { seleccionada = m } }
+                            if (mostrarFiltros) {
+                                item { PanelFiltros(e.mediciones, filtro) { filtro = it } }
+                            }
+                            item {
+                                Text(
+                                    text = "Mostrando ${visibles.size} de ${e.mediciones.size} mediciones.",
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            if (visibles.isEmpty()) item { Text("No hay mediciones con esos filtros.") }
+                            items(visibles) { m -> TarjetaMedicion(m) { seleccionada = m } }
                         }
                     }
             }

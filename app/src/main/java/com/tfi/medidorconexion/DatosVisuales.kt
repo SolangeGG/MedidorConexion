@@ -44,9 +44,21 @@ fun resumenDeMediciones(mediciones: List<MedicionEnvio>): List<DatoVisual> {
     return datos
 }
 
-// El servidor guarda las mediciones de todos los celulares; cada uno ve solo las suyas (misma marca y modelo)
-fun soloDeEsteDispositivo(mediciones: List<MedicionEnvio>, marca: String, modelo: String): List<MedicionEnvio> =
-    mediciones.filter { it.marca.equals(marca, ignoreCase = true) && it.modelo.equals(modelo, ignoreCase = true) }
+// El servidor guarda las mediciones de todos los celulares; cada uno ve solo las suyas.
+// Si la medición trae identificador, tiene que ser el de este celular. Las mediciones viejas, que no lo
+// tienen, se reconocen por marca y modelo para no perder el historial anterior.
+fun soloDeEsteDispositivo(
+    mediciones: List<MedicionEnvio>,
+    marca: String,
+    modelo: String,
+    id: String? = null
+): List<MedicionEnvio> = mediciones.filter { m ->
+    if (id != null && m.dispositivoId != null) {
+        m.dispositivoId == id
+    } else {
+        m.marca.equals(marca, ignoreCase = true) && m.modelo.equals(modelo, ignoreCase = true)
+    }
+}
 
 // Las mismas fichas, pero a partir de una medición guardada en el servidor
 fun datosDeMedicion(m: MedicionEnvio): List<DatoVisual> {

@@ -41,7 +41,9 @@ data class MedicionEnvio(
     @SerializedName("rsrp_dbm") val rsrpDbm: Int?,
     @SerializedName("snr_db") val snrDb: Int?,
     // Lo calcula el servidor a partir de la IP; la app no lo envía, solo lo recibe en el historial
-    val proveedor: String? = null
+    val proveedor: String? = null,
+    // Identifica al celular que midió; el historial muestra solo las mediciones del propio celular
+    @SerializedName("dispositivo_id") val dispositivoId: String? = null
 )
 
 interface ApiServidor {
@@ -68,7 +70,8 @@ suspend fun enviarMedicion(
     ping: ResultadoPing,
     descargaMbps: Double,
     subidaMbps: Double,
-    distanciaM: Double?
+    distanciaM: Double?,
+    idDispositivo: String
 ) {
     val esWifi = red.tipoConexion == "WIFI"
     api.enviarMedicion(
@@ -91,7 +94,8 @@ suspend fun enviarMedicion(
             operador = red.operador,
             redMovil = red.redMovil,
             rsrpDbm = red.rsrpDbm,
-            snrDb = red.snrDb
+            snrDb = red.snrDb,
+            dispositivoId = idDispositivo
         )
     )
 }
