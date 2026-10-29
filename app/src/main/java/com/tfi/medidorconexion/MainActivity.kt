@@ -1,49 +1,46 @@
 package com.tfi.medidorconexion
 
-import android.Manifest
 import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tfi.medidorconexion.ui.theme.AzulMarca
+import com.tfi.medidorconexion.ui.theme.Marino
 import com.tfi.medidorconexion.ui.theme.MedidorConexionTheme
-import kotlinx.coroutines.launch
+import com.tfi.medidorconexion.ui.theme.NaranjaMarca
+import com.tfi.medidorconexion.ui.theme.TurquesaMarca
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,19 +48,66 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MedidorConexionTheme {
-                var verHistorial by rememberSaveable { mutableStateOf(false) }
-                BackHandler(enabled = verHistorial) { verHistorial = false }
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    if (verHistorial) {
-                        PantallaHistorial(
-                            onVolver = { verHistorial = false },
-                            modifier = Modifier.padding(innerPadding)
-                        )
+                val pestanas = listOf("🏠" to "Inicio", "📋" to "Historial", "📊" to "Gráficos")
+                var pestana by rememberSaveable { mutableIntStateOf(0) }
+                // Dentro de "Inicio": 0 = menú con las dos opciones, 1 = Detectar conexión, 2 = Medir
+                var inicio by rememberSaveable { mutableIntStateOf(0) }
+                BackHandler(enabled = pestana != 0) { pestana = 0 }
+
+                // Condición de la última conexión detectada o medida: colorea el ícono de los encabezados
+                var calidad by remember { mutableStateOf<Calidad?>(null) }
+
+                // Al abrir se ve un momento la bienvenida y después el menú de inicio
+                var bienvenida by rememberSaveable { mutableStateOf(true) }
+                LaunchedEffect(Unit) {
+                    delay(2600)
+                    bienvenida = false
+                }
+
+                Crossfade(targetState = bienvenida, label = "bienvenida") { mostrarBienvenida ->
+                    if (mostrarBienvenida) {
+                        PantallaBienvenida()
                     } else {
-                        PantallaPrincipal(
-                            onVerHistorial = { verHistorial = true },
-                            modifier = Modifier.padding(innerPadding)
-                        )
+                        Scaffold(
+                            modifier = Modifier.fillMaxSize(),
+                            containerColor = MaterialTheme.colorScheme.background,
+                            bottomBar = {
+                                NavigationBar(containerColor = MaterialTheme.colorScheme.background) {
+                                    pestanas.forEachIndexed { i, (icono, nombre) ->
+                                        NavigationBarItem(
+                                            selected = pestana == i,
+                                            onClick = {
+                                                if (i == 0) inicio = 0
+                                                pestana = i
+                                            },
+                                            icon = { Text(icono, fontSize = 20.sp) },
+                                            label = { Text(nombre) },
+                                            colors = NavigationBarItemDefaults.colors(
+                                                selectedTextColor = Marino,
+                                                indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        ) { innerPadding ->
+                            // Cada pantalla dibuja su encabezado arriba: solo se respeta la barra de abajo
+                            val modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
+                            when (pestana) {
+                                0 -> when (inicio) {
+                                    0 -> PantallaInicio(
+                                        modifier = modifier,
+                                        calidad = calidad,
+                                        onDetectar = { inicio = 1 },
+                                        onMedir = { inicio = 2 }
+                                    )
+                                    1 -> PantallaDetectar(modifier, calidad, { calidad = it }) { inicio = 0 }
+                                    else -> PantallaMedir(modifier, calidad, { calidad = it }) { inicio = 0 }
+                                }
+                                1 -> PantallaHistorial(modifier, calidad)
+                                else -> PantallaGraficos(modifier, calidad)
+                            }
+                        }
                     }
                 }
             }
@@ -71,141 +115,124 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+// Lo que se midió con el servidor
+data class Velocidades(
+    val descargaMbps: Double,
+    val subidaMbps: Double,
+    val pingMs: Double,
+    val jitterMs: Double
+)
+
+// Resultado de detectar o medir: un mensaje, los datos extraídos y, si se midió, las velocidades
+data class ResultadoMedicion(
+    val mensaje: String,
+    val exito: Boolean = true,
+    val datos: List<DatoVisual> = emptyList(),
+    val velocidades: Velocidades? = null,
+    val tipoConexion: String = "",
+    val calidad: Calidad? = null,
+    val senalDbm: Int? = null
+)
+
 // Recorre el procedimiento completo (conexión, contexto, ping, descarga, subida, envío)
-// y devuelve el texto final; en cada etapa avisa el progreso con informar()
+// y devuelve el resultado; en cada etapa avisa el progreso con informar()
 suspend fun medirYEnviar(
     context: Context,
     distanciaM: Double?,
     informar: (String) -> Unit
-): String {
+): ResultadoMedicion {
     informar("Detectando la conexión...")
     val red = leerDatosRed(context)
     if (red.tipoConexion != "WIFI" && red.tipoConexion != "MOVIL") {
-        return describir(red) + "\n\nNo se puede medir sin Wi-Fi ni datos móviles."
+        return ResultadoMedicion(
+            mensaje = "No se puede medir sin Wi-Fi ni datos móviles.",
+            exito = false,
+            datos = datosExtraidos(red, null)
+        )
     }
     val contexto = leerContexto(context)
-    // Lo detectado se muestra desde el principio y queda en el resultado final
-    val detectado = describir(red) + "\n\n" + describirContexto(contexto)
+    val datos = datosExtraidos(red, contexto)
+    val senal = if (red.tipoConexion == "WIFI") red.rssiDbm else red.rsrpDbm
+    val calidad = calidadSenal(red.tipoConexion, senal)
+    // Mientras se mide solo se informa en qué etapa va; los resultados se muestran al terminar
     return try {
-        informar("Midiendo ping...\n\n$detectado")
+        informar("Paso 1 de 4: midiendo el ping...")
         val ping = medirPing()
-        informar("Midiendo descarga (unos 10 s)...\n\n$detectado")
+        informar("Paso 2 de 4: midiendo la descarga (unos 10 s)...")
         val descarga = medirDescarga()
-        informar("Midiendo subida (unos 10 s)...\n\n$detectado")
+        informar("Paso 3 de 4: midiendo la subida (unos 10 s)...")
         val subida = medirSubida()
-        informar("Enviando resultados al servidor...\n\n$detectado")
+        informar("Paso 4 de 4: enviando los resultados al servidor...")
         enviarMedicion(red, contexto, ping, descarga, subida, distanciaM)
-        """
-            Medición guardada en el servidor
-
-            Descarga: %.2f Mbps
-            Subida: %.2f Mbps
-            Ping: %.1f ms (jitter %.1f ms)
-        """.trimIndent().format(descarga, subida, ping.promedioMs, ping.jitterMs) +
-            "\n\n" + detectado
+        ResultadoMedicion(
+            mensaje = "Medición guardada en el servidor",
+            datos = datos,
+            velocidades = Velocidades(descarga, subida, ping.promedioMs, ping.jitterMs),
+            tipoConexion = red.tipoConexion,
+            calidad = calidad,
+            senalDbm = senal
+        )
     } catch (e: Exception) {
-        "No se pudo completar la medición: ${e.message}\n(¿está el servidor andando y bien configurada la URL en Servidor.kt?)"
+        ResultadoMedicion(
+            mensaje = "No se pudo completar la medición: ${e.message}\n" +
+                "(¿está el servidor andando y bien configurada la URL en Servidor.kt?)",
+            exito = false,
+            datos = datos,
+            tipoConexion = red.tipoConexion,
+            calidad = calidad,
+            senalDbm = senal
+        )
     }
 }
 
-// Pantalla principal: un título, tres botones (detectar, medir y enviar, historial) y el resultado
+// Resultado: mensaje, condición de la conexión, velocímetros, ping y jitter, y los datos en fichas.
+// Sin velocidades (Detectar) se muestran solo la condición y los datos de la conexión y del dispositivo.
 @Composable
-fun PantallaPrincipal(onVerHistorial: () -> Unit, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var resultado by remember { mutableStateOf("Tocá el botón para detectar la conexión") }
-    var leyendo by remember { mutableStateOf(false) }
-    var midiendo by remember { mutableStateOf(false) }
-    var distancia by remember { mutableStateOf("") }
-    val ocupado = leyendo || midiendo
-
-    // Pide los permisos de ubicación y teléfono al abrir la app
-    val pedirPermisos = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { }
-    LaunchedEffect(Unit) {
-        pedirPermisos.launch(
-            arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.READ_PHONE_STATE
+fun PanelResultado(r: ResultadoMedicion) {
+    val v = r.velocidades
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = if (r.exito) MaterialTheme.colorScheme.secondaryContainer
+                else MaterialTheme.colorScheme.errorContainer
             )
-        )
-    }
+        ) {
+            Text(
+                text = (if (r.exito) "✅  " else "⚠️  ") + r.mensaje,
+                modifier = Modifier.padding(16.dp),
+                fontWeight = FontWeight.SemiBold
+            )
+        }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(text = "Medidor de Conexión", fontSize = 28.sp, fontWeight = FontWeight.Bold)
-        Text(
-            text = "Wi-Fi y datos móviles",
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(12.dp))
+        if (r.calidad != null && r.senalDbm != null) {
+            TarjetaCondicion(r.calidad, r.tipoConexion, r.senalDbm, Modifier.fillMaxWidth())
+        }
 
-        // 1. Detectar conexión: tal como lo hizo Solange
-        Button(
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !ocupado,
-            onClick = {
-                leyendo = true
-                // La ubicación tarda un momento, por eso se lee "en segundo plano"
-                scope.launch {
-                    val red = leerDatosRed(context)
-                    val contexto = leerContexto(context)
-                    resultado = describir(red) + "\n\n" + describirContexto(contexto)
-                    leyendo = false
+        if (v != null) {
+            Tarjeta(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Velocimetro(v.descargaMbps, "⬇  Descarga", listOf(TurquesaMarca, AzulMarca))
+                    Velocimetro(v.subidaMbps, "⬆  Subida", listOf(NaranjaMarca, Color(0xFFC0392B)))
                 }
             }
-        ) {
-            Text(if (leyendo) "Leyendo..." else "Detectar conexión")
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                TarjetaMetrica("⏱", "Ping", v.pingMs, "ms", colorPing(v.pingMs), Modifier.weight(1f))
+                TarjetaMetrica("〰", "Jitter", v.jitterMs, "ms", colorJitter(v.jitterMs), Modifier.weight(1f))
+            }
         }
 
-        // 2. Medir: ping, descarga y subida; los resultados se envían al servidor
-        OutlinedTextField(
-            modifier = Modifier.fillMaxWidth(),
-            value = distancia,
-            onValueChange = { distancia = it },
-            label = { Text("Distancia al router en metros (solo Wi-Fi)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            singleLine = true,
-            enabled = !ocupado
-        )
-        FilledTonalButton(
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !ocupado,
-            onClick = {
-                midiendo = true
-                // Las pruebas tardan unos 30 segundos, por eso se hacen "en segundo plano"
-                scope.launch {
-                    resultado = medirYEnviar(
-                        context,
-                        distancia.replace(',', '.').toDoubleOrNull()
-                    ) { resultado = it }
-                    midiendo = false
+        if (r.datos.isNotEmpty()) {
+            Tarjeta(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Datos extraídos", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Marino)
+                    FichasDatos(r.datos)
                 }
             }
-        ) {
-            Text(if (midiendo) "Midiendo..." else "Medir y enviar al servidor")
-        }
-
-        // 3. Historial de mediciones guardadas
-        OutlinedButton(
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !ocupado,
-            onClick = onVerHistorial
-        ) {
-            Text("Ver historial")
-        }
-
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Text(text = resultado, fontSize = 16.sp, modifier = Modifier.padding(16.dp))
         }
     }
 }

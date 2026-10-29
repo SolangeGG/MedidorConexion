@@ -39,7 +39,9 @@ data class MedicionEnvio(
     val operador: String?,
     @SerializedName("red_movil") val redMovil: String?,
     @SerializedName("rsrp_dbm") val rsrpDbm: Int?,
-    @SerializedName("snr_db") val snrDb: Int?
+    @SerializedName("snr_db") val snrDb: Int?,
+    // Lo calcula el servidor a partir de la IP; la app no lo envía, solo lo recibe en el historial
+    val proveedor: String? = null
 )
 
 interface ApiServidor {
@@ -47,7 +49,7 @@ interface ApiServidor {
     suspend fun enviarMedicion(@Body medicion: MedicionEnvio)
 
     // Historial guardado, de la más nueva a la más vieja
-    @GET("mediciones")
+    @GET("mediciones?limite=500")
     suspend fun listarMediciones(): List<MedicionEnvio>
 }
 

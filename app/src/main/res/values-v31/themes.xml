@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Pantalla de inicio de Android 12+: fondo blanco y el velocímetro azul marino en vez del robot -->
+    <style name="Theme.MedidorConexion" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowSplashScreenBackground">#FFFFFFFF</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_inicio_marino</item>
+    </style>
+</resources>
