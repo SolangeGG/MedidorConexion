@@ -18,7 +18,7 @@ API REST en Node.js + Express con PostgreSQL. Es el otro extremo de las pruebas 
 | GET | `/descarga?segundos=12` | Flujo de bytes aleatorios (máx. 30 s). La app cuenta bytes y corta al terminar. |
 | POST | `/subida` | Recibe y descarta el cuerpo. Responde `{"bytes_recibidos": N}`. |
 | POST | `/mediciones` | Guarda una medición (JSON de abajo). Responde 201 con la fila guardada. |
-| GET | `/mediciones` | Historial. Filtros: `tipo_conexion`, `banda`, `operador` (parcial), `desde`, `hasta`, `limite`. |
+| GET | `/mediciones` | Historial. Filtros: `tipo_conexion`, `banda`, `operador` (parcial), `dispositivo_id`, `desde`, `hasta`, `limite`. |
 
 ## JSON de `POST /mediciones`
 
@@ -48,6 +48,11 @@ Obligatorios: `fecha_hora` (ISO 8601), `marca`, `modelo`, `tipo_conexion` (`WIFI
 Para `MOVIL` se envían `operador`, `red_movil`, `rsrp_dbm` y `snr_db` en lugar de los campos de Wi-Fi.
 Los campos que no corresponden al tipo de conexión se ignoran y quedan en NULL.
 `proveedor` no hace falta enviarlo: el servidor lo obtiene por la IP pública.
+
+`dispositivo_id` (texto de hasta 64 caracteres, opcional) identifica al celular que midió. La app lo envía
+siempre y, al leer el historial, muestra solo las mediciones con su propio identificador.
+
+Si la base ya existía antes de esta columna, `npm run setup-db` la agrega sin borrar nada.
 
 Errores de validación: 400 con `{"errores": [...]}`.
 

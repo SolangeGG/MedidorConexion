@@ -23,8 +23,14 @@ CREATE TABLE IF NOT EXISTS mediciones (
     operador       TEXT,
     red_movil      TEXT,
     rsrp_dbm       INTEGER,
-    snr_db         INTEGER
+    snr_db         INTEGER,
+    -- Identificador del celular que hizo la medición (cada celular ve solo las suyas)
+    dispositivo_id TEXT
 );
+
+-- Para bases creadas antes de existir esta columna
+ALTER TABLE mediciones ADD COLUMN IF NOT EXISTS dispositivo_id TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_mediciones_fecha ON mediciones (fecha_hora DESC);
 CREATE INDEX IF NOT EXISTS idx_mediciones_tipo ON mediciones (tipo_conexion);
+CREATE INDEX IF NOT EXISTS idx_mediciones_dispositivo ON mediciones (dispositivo_id);

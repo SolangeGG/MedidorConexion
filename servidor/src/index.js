@@ -89,7 +89,7 @@ async function proveedorPorIp(ip) {
 
 const OBLIGATORIOS_NUM = ['descarga_mbps', 'subida_mbps', 'ping_ms', 'jitter_ms'];
 const OPCIONALES_NUM = ['latitud', 'longitud', 'rssi_dbm', 'enlace_mbps', 'distancia_m', 'rsrp_dbm', 'snr_db'];
-const OPCIONALES_TXT = ['ssid', 'banda', 'proveedor', 'operador', 'red_movil'];
+const OPCIONALES_TXT = ['ssid', 'banda', 'proveedor', 'operador', 'red_movil', 'dispositivo_id'];
 
 function validar(b) {
   const errores = [];
@@ -106,6 +106,9 @@ function validar(b) {
   }
   if (b.latitud != null && Math.abs(b.latitud) > 90) errores.push('latitud fuera de rango');
   if (b.longitud != null && Math.abs(b.longitud) > 180) errores.push('longitud fuera de rango');
+  if (b.dispositivo_id != null && (typeof b.dispositivo_id !== 'string' || b.dispositivo_id.length > 64)) {
+    errores.push('dispositivo_id debe ser un texto de hasta 64 caracteres');
+  }
   return errores;
 }
 
@@ -144,7 +147,7 @@ app.post('/mediciones', async (req, res) => {
 
 // Historial, con filtros por tipo de conexión, banda, operador y fecha
 app.get('/mediciones', async (req, res) => {
-  const { tipo_conexion, banda, operador, desde, hasta } = req.query;
+  const { tipo_conexion, banda, operador, dispositivo_id, desde, hasta } = req.query;
   const condiciones = [];
   const valores = [];
   const agregar = (sql, valor) => { valores.push(valor); condiciones.push(sql.replace('?', `$${valores.length}`)); };
@@ -152,6 +155,7 @@ app.get('/mediciones', async (req, res) => {
   if (tipo_conexion) agregar('tipo_conexion = ?', String(tipo_conexion).toUpperCase());
   if (banda) agregar('banda = ?', banda);
   if (operador) agregar('operador ILIKE ?', `%${operador}%`);
+  if (dispositivo_id) agregar('dispositivo_id = ?', dispositivo_id);
   if (desde) {
     if (Number.isNaN(Date.parse(desde))) return res.status(400).json({ error: 'desde inválida' });
     agregar('fecha_hora >= ?', desde);
