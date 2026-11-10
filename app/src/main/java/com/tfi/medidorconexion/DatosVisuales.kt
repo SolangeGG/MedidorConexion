@@ -69,7 +69,7 @@ fun datosDeMedicion(m: MedicionEnvio): List<DatoVisual> {
         datos += DatoVisual("📡", "Banda", m.banda ?: "?")
         datos += DatoVisual("📉", "Señal", m.rssiDbm?.let { "$it dBm" } ?: "No disponible")
         datos += DatoVisual("🔗", "Velocidad de enlace", m.enlaceMbps?.let { "$it Mbps" } ?: "No disponible")
-        if (m.distanciaM != null) datos += DatoVisual("📏", "Distancia al router", "%.1f m".format(m.distanciaM))
+        if (m.distanciaM != null) datos += DatoVisual("📏", "Distancia estimada al router", "%.1f m".format(m.distanciaM))
         if (m.proveedor != null) datos += DatoVisual("🏢", "Proveedor", m.proveedor)
     } else {
         datos += DatoVisual("🌐", "Conexión", "Datos móviles")

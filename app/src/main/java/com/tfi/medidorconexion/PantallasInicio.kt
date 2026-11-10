@@ -195,7 +195,7 @@ fun PantallaDetectar(
     }
 }
 
-// Medir: se ingresa la distancia al router y se calculan la subida, la bajada, el ping y el jitter;
+// Medir: se calculan la subida, la bajada, el ping y el jitter, y la distancia al router se estima con el RSSI;
 // la medición se envía al servidor. Mientras mide no se muestra ningún dato, solo el avance.
 @Composable
 fun PantallaMedir(
@@ -210,7 +210,6 @@ fun PantallaMedir(
     var etapa by remember { mutableStateOf("") }
     var medicion by remember { mutableStateOf<ResultadoMedicion?>(null) }
     var midiendo by remember { mutableStateOf(false) }
-    var distancia by remember { mutableStateOf("") }
 
     Column(modifier = modifier.fillMaxSize()) {
         EncabezadoApp("Medir", "Subida, bajada, ping y jitter", calidad = calidad)
@@ -229,45 +228,27 @@ fun PantallaMedir(
                 onClick = onVolver
             ) { Text("←  Volver", fontWeight = FontWeight.SemiBold) }
 
-            Tarjeta(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Distancia al router", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Marino)
-                    OutlinedTextField(
-                        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp),
-                        value = distancia,
-                        onValueChange = { distancia = it },
-                        label = { Text("Metros (solo si estás en Wi-Fi)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        singleLine = true,
-                        shape = FORMA_BOTON,
-                        enabled = !midiendo
-                    )
-                    Button(
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = FORMA_BOTON,
-                        enabled = !midiendo,
-                        onClick = {
-                            midiendo = true
-                            medicion = null
-                            // Las pruebas tardan unos 30 segundos, por eso se hacen "en segundo plano"
-                            scope.launch {
-                                val terminada = medirYEnviar(
-                                    context,
-                                    distancia.replace(',', '.').toDoubleOrNull()
-                                ) { etapa = it }
-                                medicion = terminada
-                                onCalidad(terminada.calidad)
-                                midiendo = false
-                            }
-                        }
-                    ) {
-                        Text(
-                            if (midiendo) "Midiendo..." else "🚀  Medir y enviar al servidor",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
+            Button(
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = FORMA_BOTON,
+                enabled = !midiendo,
+                onClick = {
+                    midiendo = true
+                    medicion = null
+                    // Las pruebas tardan unos 30 segundos, por eso se hacen "en segundo plano"
+                    scope.launch {
+                        val terminada = medirYEnviar(context) { etapa = it }
+                        medicion = terminada
+                        onCalidad(terminada.calidad)
+                        midiendo = false
                     }
                 }
+            ) {
+                Text(
+                    if (midiendo) "Midiendo..." else "🚀  Medir y enviar al servidor",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
 
             val terminada = medicion
@@ -282,8 +263,8 @@ fun PantallaMedir(
                 terminada != null -> PanelResultado(terminada)
                 else -> Tarjeta(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        "Ingresá la distancia al router y tocá \"Medir y enviar al servidor\". Se calculan la subida, " +
-                            "la bajada, el ping y el jitter, y la medición se guarda en el servidor.",
+                        "Tocá \"Medir y enviar al servidor\". Se calculan la subida, la bajada, el ping y el jitter, " +
+                            "se estima la distancia al router con la señal y la medición se guarda en el servidor.",
                         fontSize = 15.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(16.dp)

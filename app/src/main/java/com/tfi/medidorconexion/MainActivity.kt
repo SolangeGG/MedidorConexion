@@ -138,7 +138,6 @@ data class ResultadoMedicion(
 // y devuelve el resultado; en cada etapa avisa el progreso con informar()
 suspend fun medirYEnviar(
     context: Context,
-    distanciaM: Double?,
     informar: (String) -> Unit
 ): ResultadoMedicion {
     informar("Detectando la conexión...")
@@ -163,6 +162,8 @@ suspend fun medirYEnviar(
         informar("Paso 3 de 4: midiendo la subida (unos 10 s)...")
         val subida = medirSubida()
         informar("Paso 4 de 4: enviando los resultados al servidor...")
+        // La distancia al router no se ingresa: se estima con el RSSI
+        val distanciaM = distanciaEstimadaM(red.rssiDbm, red.banda)
         enviarMedicion(red, contexto, ping, descarga, subida, distanciaM, idDelDispositivo(context))
         ResultadoMedicion(
             mensaje = "Medición guardada en el servidor",

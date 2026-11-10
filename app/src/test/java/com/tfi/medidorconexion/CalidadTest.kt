@@ -2,6 +2,7 @@ package com.tfi.medidorconexion
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CalidadTest {
@@ -19,6 +20,18 @@ class CalidadTest {
         // -90 dBm es débil en Wi-Fi pero buena en datos móviles (RSRP)
         assertEquals(Calidad.DEBIL, calidadSenal("WIFI", -90))
         assertEquals(Calidad.BUENA, calidadSenal("MOVIL", -90))
+    }
+
+    @Test
+    fun distanciaEstimada_segunRssi() {
+        // A 1 m el RSSI es el de referencia: -40 dBm en 2,4 GHz y -47 dBm en 5 GHz
+        assertEquals(1.0, distanciaEstimadaM(-40, "2,4 GHz")!!, 0.001)
+        assertEquals(1.0, distanciaEstimadaM(-47, "5 GHz")!!, 0.001)
+        // 30 dB menos con n = 3 son 10 m
+        assertEquals(10.0, distanciaEstimadaM(-70, "2,4 GHz")!!, 0.001)
+        // Cuanto más débil la señal, más lejos
+        assertTrue(distanciaEstimadaM(-80, "5 GHz")!! > distanciaEstimadaM(-60, "5 GHz")!!)
+        assertNull(distanciaEstimadaM(null, "5 GHz"))
     }
 
     @Test
@@ -97,7 +110,7 @@ class CalidadTest {
         assertEquals(100.0, r.velocidades!!.descargaMbps, 0.0)
         val fichas = r.datos.associate { it.titulo to it.valor }
         assertEquals("Casa", fichas["Red"])
-        assertEquals("3,0 m".replace(',', '.'), fichas["Distancia al router"]?.replace(',', '.'))
+        assertEquals("3,0 m".replace(',', '.'), fichas["Distancia estimada al router"]?.replace(',', '.'))
         assertEquals("Personal", fichas["Proveedor"])
     }
 

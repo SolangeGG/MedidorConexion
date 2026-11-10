@@ -28,6 +28,17 @@ fun nivelSenal(tipoConexion: String, dbm: Int): Float {
     return ((dbm - peor).toFloat() / (mejor - peor)).coerceIn(0f, 1f)
 }
 
+// Distancia estimada al router a partir del RSSI, con el modelo de pérdida logarítmica:
+//   d = 10 ^ ((RSSI a 1 m - RSSI) / (10 * n))
+// El RSSI a 1 m es menor en 5 GHz (esa banda pierde más) y n = 3 es un valor típico en interiores con paredes.
+// Es solo una estimación: las paredes y las interferencias mueven el RSSI.
+fun distanciaEstimadaM(rssiDbm: Int?, banda: String?): Double? {
+    if (rssiDbm == null) return null
+    val rssiA1m = if (banda == "2,4 GHz") -40.0 else -47.0
+    val exponente = 3.0
+    return Math.pow(10.0, (rssiA1m - rssiDbm) / (10 * exponente))
+}
+
 // Frase corta que acompaña a la condición de la conexión
 fun fraseCondicion(calidad: Calidad, tipoConexion: String): String = when (calidad) {
     Calidad.EXCELENTE -> "Señal muy fuerte, ideal para todo uso."
