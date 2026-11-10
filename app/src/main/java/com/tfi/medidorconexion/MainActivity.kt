@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tfi.medidorconexion.ui.theme.AzulMarca
@@ -72,6 +73,8 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxSize(),
                             containerColor = MaterialTheme.colorScheme.background,
                             bottomBar = {
+                              Column {
+                                PieDeApp()
                                 NavigationBar(containerColor = MaterialTheme.colorScheme.background) {
                                     pestanas.forEachIndexed { i, (icono, nombre) ->
                                         NavigationBarItem(
@@ -89,6 +92,7 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
                                 }
+                              }
                             }
                         ) { innerPadding ->
                             // Cada pantalla dibuja su encabezado arriba: solo se respeta la barra de abajo
@@ -113,6 +117,18 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
+
+// Pie de la app, fijo sobre la barra de pestañas
+@Composable
+fun PieDeApp() {
+    Text(
+        text = "Comunicación de Datos 2026 · Grima, Rojas Aguilar, Scro",
+        fontSize = 11.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 2.dp)
+    )
 }
 
 // Lo que se midió con el servidor
