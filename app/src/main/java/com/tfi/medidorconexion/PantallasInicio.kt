@@ -202,6 +202,7 @@ fun PantallaMedir(
     modifier: Modifier = Modifier,
     calidad: Calidad? = null,
     onCalidad: (Calidad?) -> Unit,
+    onGuardada: () -> Unit,
     onVolver: () -> Unit
 ) {
     BackHandler(onBack = onVolver)
@@ -240,6 +241,8 @@ fun PantallaMedir(
                         val terminada = medirYEnviar(context) { etapa = it }
                         medicion = terminada
                         onCalidad(terminada.calidad)
+                        // Hay una medición nueva en el servidor: el historial y los gráficos se vuelven a leer
+                        if (terminada.exito) onGuardada()
                         midiendo = false
                     }
                 }

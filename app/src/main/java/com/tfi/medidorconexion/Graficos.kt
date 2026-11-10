@@ -47,9 +47,12 @@ private val SERIE_SUBIDA = Serie("Subida (Mbps)", NaranjaMarca, Color(0xFFC0392B
 
 // Pantalla con los gráficos del historial (punto 7 del informe: comparaciones)
 @Composable
-fun PantallaGraficos(modifier: Modifier = Modifier, calidad: Calidad? = null) {
-    val (estado, recargar) = cargarHistorial()
-
+fun PantallaGraficos(
+    estado: EstadoHistorial,
+    recargar: () -> Unit,
+    modifier: Modifier = Modifier,
+    calidad: Calidad? = null
+) {
     Column(modifier = modifier.fillMaxSize()) {
         EncabezadoApp("Gráficos", "Comparaciones de tu dispositivo", calidad = calidad)
 

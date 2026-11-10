@@ -58,6 +58,9 @@ class MainActivity : ComponentActivity() {
                 // Condición de la última conexión detectada o medida: colorea el ícono de los encabezados
                 var calidad by remember { mutableStateOf<Calidad?>(null) }
 
+                // El historial se lee una sola vez y lo comparten Historial y Gráficos
+                val (historial, recargarHistorial) = cargarHistorial()
+
                 // Al abrir se ve un momento la bienvenida y después el menú de inicio
                 var bienvenida by rememberSaveable { mutableStateOf(true) }
                 LaunchedEffect(Unit) {
@@ -106,10 +109,12 @@ class MainActivity : ComponentActivity() {
                                         onMedir = { inicio = 2 }
                                     )
                                     1 -> PantallaDetectar(modifier, calidad, { calidad = it }) { inicio = 0 }
-                                    else -> PantallaMedir(modifier, calidad, { calidad = it }) { inicio = 0 }
+                                    else -> PantallaMedir(modifier, calidad, { calidad = it }, recargarHistorial) {
+                                        inicio = 0
+                                    }
                                 }
-                                1 -> PantallaHistorial(modifier, calidad)
-                                else -> PantallaGraficos(modifier, calidad)
+                                1 -> PantallaHistorial(historial, recargarHistorial, modifier, calidad)
+                                else -> PantallaGraficos(historial, recargarHistorial, modifier, calidad)
                             }
                         }
                     }

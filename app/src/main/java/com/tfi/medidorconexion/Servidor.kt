@@ -6,6 +6,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.Query
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
@@ -50,9 +51,9 @@ interface ApiServidor {
     @POST("mediciones")
     suspend fun enviarMedicion(@Body medicion: MedicionEnvio)
 
-    // Historial guardado, de la más nueva a la más vieja
+    // Historial guardado, de la más nueva a la más vieja; el servidor filtra por celular
     @GET("mediciones?limite=500")
-    suspend fun listarMediciones(): List<MedicionEnvio>
+    suspend fun listarMediciones(@Query("dispositivo_id") dispositivoId: String): List<MedicionEnvio>
 }
 
 private val api: ApiServidor = Retrofit.Builder()
@@ -61,7 +62,8 @@ private val api: ApiServidor = Retrofit.Builder()
     .build()
     .create(ApiServidor::class.java)
 
-suspend fun obtenerHistorial(): List<MedicionEnvio> = api.listarMediciones()
+// Solo trae las mediciones del celular con ese identificador, no las de los demás
+suspend fun obtenerHistorial(idDispositivo: String): List<MedicionEnvio> = api.listarMediciones(idDispositivo)
 
 // Arma el JSON con todo lo medido y lo envía al servidor (lanza excepción si falla)
 suspend fun enviarMedicion(

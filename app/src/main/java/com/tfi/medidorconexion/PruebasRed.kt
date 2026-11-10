@@ -39,6 +39,9 @@ fun resumirPing(muestrasMs: List<Double>): ResultadoPing {
 // 10 solicitudes breves a /ping; se mide el tiempo de ida y vuelta de cada una
 suspend fun medirPing(): ResultadoPing = withContext(Dispatchers.IO) {
     val pedido = Request.Builder().url(Servidor.URL_BASE + "ping").build()
+    // Solicitud de calentamiento, que no se cuenta: abrir la conexión tarda más que un ping común
+    // y subiría el promedio y el jitter
+    cliente.newCall(pedido).execute().use { it.body?.bytes() }
     val muestras = mutableListOf<Double>()
     repeat(MUESTRAS_PING) {
         val inicio = System.nanoTime()

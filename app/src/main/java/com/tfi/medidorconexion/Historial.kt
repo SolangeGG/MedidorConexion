@@ -61,10 +61,9 @@ fun cargarHistorial(): Pair<EstadoHistorial, () -> Unit> {
     LaunchedEffect(recargas) {
         estado = EstadoHistorial.Cargando
         estado = try {
-            // Solo las mediciones de este celular, aunque el servidor guarde las de otros
-            EstadoHistorial.Listo(
-                soloDeEsteDispositivo(obtenerHistorial(), Build.MANUFACTURER, Build.MODEL, idDelDispositivo(context))
-            )
+            // El servidor ya devuelve solo las de este celular; el filtro local es una segunda barrera
+            val id = idDelDispositivo(context)
+            EstadoHistorial.Listo(soloDeEsteDispositivo(obtenerHistorial(id), Build.MANUFACTURER, Build.MODEL, id))
         } catch (e: Exception) {
             EstadoHistorial.Error(e.message ?: "error desconocido")
         }
@@ -90,8 +89,12 @@ fun detalleConexion(m: MedicionEnvio): String =
 
 // Lista de las mediciones guardadas en el servidor
 @Composable
-fun PantallaHistorial(modifier: Modifier = Modifier, calidad: Calidad? = null) {
-    val (estado, recargar) = cargarHistorial()
+fun PantallaHistorial(
+    estado: EstadoHistorial,
+    recargar: () -> Unit,
+    modifier: Modifier = Modifier,
+    calidad: Calidad? = null
+) {
     var seleccionada by remember { mutableStateOf<MedicionEnvio?>(null) }
     var filtro by remember { mutableStateOf(FiltroHistorial()) }
     var mostrarFiltros by remember { mutableStateOf(false) }
