@@ -15,7 +15,7 @@ object Servidor {
     //   emulador de Android Studio -> "http://10.0.2.2:3000/"  (10.0.2.2 es la PC que aloja el emulador)
     //   celular real con el servidor en la PC -> "http://IP-DE-LA-PC:3000/" (misma red Wi-Fi)
     //   servidor desplegado en Render -> "https://NOMBRE.onrender.com/"
-    const val URL_BASE = "http://192.168.1.10:3000/"
+    const val URL_BASE = "https://medidor-conexion.onrender.com/"
 }
 
 // JSON que espera POST /mediciones (ver servidor/README.md); los nulos no se envían
